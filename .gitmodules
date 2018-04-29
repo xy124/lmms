@@ -34,3 +34,6 @@
 [submodule "src/3rdparty/libcds"]
 	path = src/3rdparty/libcds
 	url = https://github.com/khizmax/libcds.git
+[submodule "src/3rdparty/mingw-std-threads"]
+	path = src/3rdparty/mingw-std-threads
+	url = https://github.com/meganz/mingw-std-threads.git
