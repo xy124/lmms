@@ -285,6 +285,7 @@ void SubWindow::detach()
 	if (isDetached()) {
 		return;
 	}
+
 	auto pos = mapToGlobal(widget()->pos());
 	widget()->setWindowFlags(Qt::Window);
 	widget()->show();
@@ -453,5 +454,19 @@ void SubWindow::resizeEvent( QResizeEvent * event )
 	if( !isMaximized() && !isMinimized() && !isFullScreen() )
 	{
 		m_trackedNormalGeom.setSize( event->size() );
+	}
+}
+
+bool SubWindow::eventFilter(QObject * obj, QEvent * event)
+{
+	if (obj != static_cast<QObject *>(widget())) {
+		return QMdiSubWindow::eventFilter(obj, event);
+	}
+	switch (event->type()) {
+	case QEvent::WindowStateChange:
+		event->accept();
+		return true;
+	default:
+		return QMdiSubWindow::eventFilter(obj, event);
 	}
 }

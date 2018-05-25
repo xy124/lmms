@@ -77,6 +77,7 @@ protected:
 	virtual void paintEvent( QPaintEvent * pe );
 	virtual void changeEvent( QEvent * event );
 	virtual void showEvent( QShowEvent* event );
+	virtual bool eventFilter( QObject * obj, QEvent * event ) override;
 
 	bool isDetached() const;
 
