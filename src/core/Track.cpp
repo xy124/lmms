@@ -328,8 +328,8 @@ TrackContentObjectView::~TrackContentObjectView()
 
 /*! \brief Update a TrackContentObjectView
  *
- *  TCO's get drawn only when needed, 
- *  and when a TCO is updated, 
+ *  TCO's get drawn only when needed,
+ *  and when a TCO is updated,
  *  it needs to be redrawn.
  *
  */
@@ -1187,7 +1187,7 @@ void TrackContentWidget::updateBackground()
 
 	// draw lines
 	// vertical lines
-	pmp.setPen( QPen( gridColor(), 1 ) );	
+	pmp.setPen( QPen( gridColor(), 1 ) );
 	for( float x = 0; x < w * 2; x += ppt )
 	{
 		pmp.drawLine( QLineF( x, 0.0, x, h ) );
@@ -1198,9 +1198,9 @@ void TrackContentWidget::updateBackground()
 	{
 		pmp.drawLine( QLineF( x, 0.0, x, h ) );
 	}
-	
+
 	// horizontal line
-	pmp.setPen( QPen( gridColor(), 1 ) );	
+	pmp.setPen( QPen( gridColor(), 1 ) );
 	pmp.drawLine( 0, h-1, w*2, h-1 );
 
 	pmp.end();
@@ -1916,7 +1916,7 @@ void TrackOperationsWidget::updateMenu()
 	toMenu->addAction( embed::getIconPixmap( "cancel", 16, 16 ),
 						tr( "Remove this track" ),
 						this, SLOT( removeTrack() ) );
-	
+
 	if( ! m_trackView->trackContainerView()->fixedTCOs() )
 	{
 		toMenu->addAction( tr( "Clear this track" ), this, SLOT( clearTrack() ) );
@@ -2844,7 +2844,7 @@ void TrackView::mouseMoveEvent( QMouseEvent * me )
 	else if( m_action == MoveTrack )
 	{
 		// look which track-widget the mouse-cursor is over
-		const int yPos = 
+		const int yPos =
 			m_trackContainerView->contentWidget()->mapFromGlobal( me->globalPos() ).y();
 		const TrackView * trackAtY = m_trackContainerView->trackViewAt( yPos );
 

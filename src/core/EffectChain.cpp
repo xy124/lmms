@@ -137,13 +137,11 @@ void EffectChain::removeEffect( Effect * _effect )
 {
 	Engine::mixer()->requestChangeInModel();
 
-	Effect ** found = std::find( m_effects.begin(), m_effects.end(), _effect );
-	if( found == m_effects.end() )
+	if(m_effects.removeOne(_effect) == false)
 	{
 		Engine::mixer()->doneChangeInModel();
 		return;
 	}
-	m_effects.erase( found );
 
 	Engine::mixer()->doneChangeInModel();
 
@@ -179,8 +177,13 @@ void EffectChain::moveUp( Effect * _effect )
 	}
 }
 
-
-
+void EffectChain::moveTo(Effect * _from, Effect * _to)
+{
+	int index_from = m_effects.indexOf(_from);
+	int index_to = m_effects.indexOf(_to);
+	m_effects.removeAt(index_from);
+	m_effects.insert(index_to, _from);
+}
 
 bool EffectChain::processAudioBuffer( sampleFrame * _buf, const fpp_t _frames, bool hasInputNoise )
 {

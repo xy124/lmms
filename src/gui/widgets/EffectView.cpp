@@ -29,7 +29,9 @@
 #include <QMdiSubWindow>
 #include <QPainter>
 #include <QLayout>
+#include <QDragEnterEvent>
 
+#include "StringPairDrag.h"
 #include "EffectView.h"
 #include "DummyEffect.h"
 #include "CaptionMenu.h"
@@ -50,6 +52,7 @@ EffectView::EffectView( Effect * _model, QWidget * _parent ) :
 	m_controlView( NULL )
 {
 	setFixedSize( 210, 60 );
+	setAcceptDrops(true);
 
 	// Disable effects that are of type "DummyEffect"
 	bool isEnabled = !dynamic_cast<DummyEffect *>( effect() );
@@ -116,6 +119,46 @@ EffectView::EffectView( Effect * _model, QWidget * _parent ) :
 
 	//move above vst effect view creation
 	//setModel( _model );
+}
+
+
+
+
+void EffectView::mousePressEvent(QMouseEvent *event)
+{
+	//DataFile dataFile( DataFile::DragNDropData );
+	//QDomElement ef = effect->saveState( _doc, _this );
+
+	QPixmap thumbnail = grab().scaled(
+			128, 128,
+			Qt::KeepAspectRatio,
+			Qt::SmoothTransformation );
+	QString value = QString::number(reinterpret_cast<long>(this));
+	// TODO: is this dirty?? What's a better way? Creating a Data file??? yes maybe so one could dnd in other instances of flowvr too...
+	new StringPairDrag(QString("effect"),
+			value, thumbnail, this);
+}
+
+
+
+
+void EffectView::dragEnterEvent(QDragEnterEvent *event)
+{
+	QString type = StringPairDrag::decodeKey(event);
+	StringPairDrag::processDragEnterEvent(event, "effect");
+}
+
+
+
+
+void EffectView::dropEvent(QDropEvent *event)
+{
+	QString type = StringPairDrag::decodeKey( event );
+	printf("DropEventType: %s\n", type.data());
+	if (type == "effect")
+	{
+		emit moveTo(event, this);
+	}
 }
 
 

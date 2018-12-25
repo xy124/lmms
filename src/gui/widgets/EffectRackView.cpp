@@ -27,11 +27,13 @@
 #include <QLayout>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QDragEnterEvent>
 
 #include "EffectRackView.h"
 #include "EffectSelectDialog.h"
 #include "EffectView.h"
 #include "GroupBox.h"
+#include "StringPairDrag.h"
 
 
 EffectRackView::EffectRackView( EffectChain* model, QWidget* parent ) :
@@ -100,7 +102,7 @@ void EffectRackView::moveUp( EffectView* view )
 	if( view != m_effectViews.first() )
 	{
 		int i = 0;
-		for( QVector<EffectView *>::Iterator it = m_effectViews.begin(); 
+		for( QList<EffectView *>::Iterator it = m_effectViews.begin();
 					it != m_effectViews.end(); it++, i++ )
 		{
 			if( *it == view )
@@ -130,13 +132,36 @@ void EffectRackView::moveDown( EffectView* view )
 	}
 }
 
+void EffectRackView::moveTo(QDropEvent* event, EffectView* view)
+{
+	QString value = StringPairDrag::decodeValue(event);
+
+	EffectView* view_dragged = reinterpret_cast<EffectView*>(value.toLong());
+	if (view_dragged == view)
+	{
+		//event->setDropAction(  TODO: if we use real datafiles we need to change the action to do nothing here...
+		event->accept();
+		return;
+	}
+	fxChain()->moveTo(view_dragged->effect(), view->effect());
+	int index_from = m_effectViews.indexOf(view_dragged);
+	int index_to = m_effectViews.indexOf(view);
+	m_effectViews.removeAt(index_from);
+	m_effectViews.insert(index_to, view_dragged);
+
+	update();
+	// TODO: check if coming from same??
+	//event->setDropAction(Qt::MoveAction);
+	event->accept();
+	view_dragged->setFocus();
+}
 
 
 
 void EffectRackView::deletePlugin( EffectView* view )
 {
 	Effect * e = view->effect();
-	m_effectViews.erase( std::find( m_effectViews.begin(), m_effectViews.end(), view ) );
+	m_effectViews.removeOne(view);
 	delete view;
 	fxChain()->removeEffect( e );
 	e->deleteLater();
@@ -152,11 +177,11 @@ void EffectRackView::update()
 	QVector<bool> view_map( qMax<int>( fxChain()->m_effects.size(),
 						m_effectViews.size() ), false );
 
-	for( QVector<Effect *>::Iterator it = fxChain()->m_effects.begin();
+	for( QList<Effect *>::Iterator it = fxChain()->m_effects.begin();
 					it != fxChain()->m_effects.end(); ++it )
 	{
 		int i = 0;
-		for( QVector<EffectView *>::Iterator vit = m_effectViews.begin();
+		for( QList<EffectView *>::Iterator vit = m_effectViews.begin();
 				vit != m_effectViews.end(); ++vit, ++i )
 		{
 			if( ( *vit )->model() == *it )
@@ -168,10 +193,12 @@ void EffectRackView::update()
 		if( i >= m_effectViews.size() )
 		{
 			EffectView * view = new EffectView( *it, w );
-			connect( view, SIGNAL( moveUp( EffectView * ) ), 
+			connect( view, SIGNAL( moveUp( EffectView * ) ),
 					this, SLOT( moveUp( EffectView * ) ) );
 			connect( view, SIGNAL( moveDown( EffectView * ) ),
 				this, SLOT( moveDown( EffectView * ) ) );
+			connect(view, SIGNAL(moveTo(QDropEvent *, EffectView *)),
+				this, SLOT(moveTo(QDropEvent *, EffectView *)));
 			connect( view, SIGNAL( deletePlugin( EffectView * ) ),
 				this, SLOT( deletePlugin( EffectView * ) ),
 							Qt::QueuedConnection );
@@ -194,7 +221,7 @@ void EffectRackView::update()
 	const int EffectViewMargin = 3;
 	m_lastY = EffectViewMargin;
 
-	for( QVector<EffectView *>::Iterator it = m_effectViews.begin(); 
+	for( QList<EffectView *>::Iterator it = m_effectViews.begin();
 					it != m_effectViews.end(); i++ )
 	{
 		if( i < view_map.size() && view_map[i] == false )
@@ -235,7 +262,7 @@ void EffectRackView::addEffect()
 	update();
 
 	// Find the effectView, and show the controls
-	for( QVector<EffectView *>::Iterator vit = m_effectViews.begin();
+	for( QList<EffectView *>::Iterator vit = m_effectViews.begin();
 					vit != m_effectViews.end(); ++vit )
 	{
 		if( ( *vit )->effect() == fx )

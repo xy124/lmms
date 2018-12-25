@@ -69,6 +69,7 @@ public slots:
 signals:
 	void moveUp( EffectView * _plugin );
 	void moveDown( EffectView * _plugin );
+	void moveTo(QDropEvent * _de, EffectView * _view);
 	void deletePlugin( EffectView * _plugin );
 
 
@@ -76,6 +77,9 @@ protected:
 	virtual void contextMenuEvent( QContextMenuEvent * _me );
 	virtual void paintEvent( QPaintEvent * _pe );
 	virtual void modelChanged();
+  virtual void dropEvent(QDropEvent *event);
+  virtual void dragEnterEvent(QDragEnterEvent *event);
+  virtual void mousePressEvent(QMouseEvent *event);
 
 
 private:

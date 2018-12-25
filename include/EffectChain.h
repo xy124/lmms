@@ -52,6 +52,7 @@ public:
 	void removeEffect( Effect * _effect );
 	void moveDown( Effect * _effect );
 	void moveUp( Effect * _effect );
+	void moveTo(Effect * _from, Effect * _to);
 	bool processAudioBuffer( sampleFrame * _buf, const fpp_t _frames, bool hasInputNoise );
 	void startRunning();
 
@@ -59,7 +60,7 @@ public:
 
 
 private:
-	typedef QVector<Effect *> EffectList;
+	typedef QList<Effect *> EffectList;
 	EffectList m_effects;
 
 	BoolModel m_enabledModel;

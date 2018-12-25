@@ -51,6 +51,7 @@ public slots:
 	void clearViews();
 	void moveUp( EffectView* view );
 	void moveDown( EffectView* view );
+	void moveTo(QDropEvent* event, EffectView* view);
 	void deletePlugin( EffectView* view );
 
 
@@ -73,7 +74,7 @@ private:
 	}
 
 
-	QVector<EffectView *> m_effectViews;
+	QList<EffectView *> m_effectViews;
 
 	GroupBox* m_effectsGroupBox;
 	QScrollArea* m_scrollArea;
