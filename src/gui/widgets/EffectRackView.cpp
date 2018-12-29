@@ -32,8 +32,11 @@
 #include "EffectRackView.h"
 #include "EffectSelectDialog.h"
 #include "EffectView.h"
+#include "Effect.h"
+#include "DummyEffect.h"
 #include "GroupBox.h"
 #include "StringPairDrag.h"
+#include "DataFile.h"
 
 
 EffectRackView::EffectRackView( EffectChain* model, QWidget* parent ) :
@@ -42,6 +45,7 @@ EffectRackView::EffectRackView( EffectChain* model, QWidget* parent ) :
 {
 	QVBoxLayout* mainLayout = new QVBoxLayout( this );
 	mainLayout->setMargin( 5 );
+	setAcceptDrops(true);
 
 	m_effectsGroupBox = new GroupBox( tr( "EFFECTS CHAIN" ) );
 	mainLayout->addWidget( m_effectsGroupBox );
@@ -123,6 +127,51 @@ void EffectRackView::moveUp( EffectView* view )
 
 
 
+void EffectRackView::startEffectDrag(QMouseEvent* event, EffectView* view)
+{
+	// TODO: copy action if ctrl is down in mouse event ? ;)
+
+	QPixmap thumbnail = view->grab().scaled(
+			128, 128,
+			Qt::KeepAspectRatio,
+			Qt::SmoothTransformation );
+
+	DataFile dataFile( DataFile::DragNDropData );
+	QDomElement parent = dataFile.createElement( "effect" );
+	Effect * effect = view->effect();
+	if( DummyEffect* dummy = dynamic_cast<DummyEffect*>(effect) )
+	{
+		parent.appendChild( dummy->originalPluginData() );
+	}
+	else
+	{
+		QDomElement ef = effect->saveState( dataFile, parent );
+		ef.setAttribute( "name", QString::fromUtf8( effect->descriptor()->name ) );
+		ef.appendChild( effect->key().saveXML( dataFile ) );
+		parent.appendChild(ef);
+	}
+
+	dataFile.content().appendChild(parent);
+
+	// TODO: save automation track links too!
+
+	QString value = dataFile.toString();
+	StringPairDrag * drag = new StringPairDrag(this);
+	deletePlugin(view);
+	update();
+	Qt::DropAction res = drag->exec(QString("effect"), value, thumbnail, Qt::MoveAction,
+			Qt::MoveAction);
+	update();
+}
+
+
+void EffectRackView::genericDragEnter(QDragEnterEvent *event)
+{
+	QString type = StringPairDrag::decodeKey(event);
+	StringPairDrag::processDragEnterEvent(event, "effect");
+}
+
+
 void EffectRackView::moveDown( EffectView* view )
 {
 	if( view != m_effectViews.last() )
@@ -132,28 +181,52 @@ void EffectRackView::moveDown( EffectView* view )
 	}
 }
 
-void EffectRackView::moveTo(QDropEvent* event, EffectView* view)
+void EffectRackView::genericDrop(QDropEvent* event, EffectView* view)
 {
-	QString value = StringPairDrag::decodeValue(event);
-
-	EffectView* view_dragged = reinterpret_cast<EffectView*>(value.toLong());
-	if (view_dragged == view)
+	QString type = StringPairDrag::decodeKey( event );
+	if (type != "effect")
 	{
-		//event->setDropAction(  TODO: if we use real datafiles we need to change the action to do nothing here...
-		event->accept();
+		// Should never be reached! (as enterdrag filters already!)
+		//event->setDropAction(Qt::CancelAction);
+		//event->accept();
 		return;
 	}
-	fxChain()->moveTo(view_dragged->effect(), view->effect());
-	int index_from = m_effectViews.indexOf(view_dragged);
-	int index_to = m_effectViews.indexOf(view);
-	m_effectViews.removeAt(index_from);
-	m_effectViews.insert(index_to, view_dragged);
+	if (!(event->possibleActions() & Qt::MoveAction))
+	{
+		// we accept only moves! later we accept
+		return;
+	}
+
+	int index_to;
+	if (view == NULL)
+	{
+		// insert at the end:
+		index_to = m_effectViews.size();
+	}
+	else
+	{
+		index_to = m_effectViews.indexOf(view);
+	}
+
+
+	QDomDocument doc;
+	QString value = StringPairDrag::decodeValue(event);
+	doc.setContent(value);
+	// only importing first effect tag so far:
+	// (maybe later we allow to select multiple effects and d'n'd them all together...
+	QDomNode node = doc.elementsByTagName("effect").item(0).firstChild();
+	Effect * fx = fxChain()->effectFromDomNode(node);
+
+
+	fxChain()->insertEffect(index_to, fx);
+
+	EffectView * new_view = createEffectView(fx);
+	new_view->show();
+	m_effectViews.insert(index_to, new_view);
 
 	update();
-	// TODO: check if coming from same??
-	//event->setDropAction(Qt::MoveAction);
-	event->accept();
-	view_dragged->setFocus();
+
+	new_view->editControls();
 }
 
 
@@ -171,9 +244,47 @@ void EffectRackView::deletePlugin( EffectView* view )
 
 
 
-void EffectRackView::update()
+void EffectRackView::dragEnterEvent(QDragEnterEvent* event)
+{
+	genericDragEnter(event);
+}
+
+
+
+
+void EffectRackView::dropEvent(QDropEvent *event)
+{
+	genericDrop(event, NULL);
+}
+
+
+
+
+EffectView * EffectRackView::createEffectView(Effect * it)
 {
 	QWidget * w = m_scrollArea->widget();
+	EffectView * view = new EffectView( it, w );
+	connect( view, SIGNAL( moveUp( EffectView * ) ),
+			this, SLOT( moveUp( EffectView * ) ) );
+	connect( view, SIGNAL( moveDown( EffectView * ) ),
+			this, SLOT( moveDown( EffectView * ) ) );
+	connect(view, SIGNAL(genericDrop(QDropEvent *, EffectView *)),
+			this, SLOT(genericDrop(QDropEvent *, EffectView *)));
+	connect(view, SIGNAL(genericDragEnter(QDragEnterEvent *)),
+			this, SLOT(genericDragEnter(QDragEnterEvent *)));
+	connect( view, SIGNAL( deletePlugin( EffectView * ) ),
+			this, SLOT( deletePlugin( EffectView * ) ),
+			Qt::QueuedConnection );
+	connect(view, SIGNAL(startEffectDrag(QMouseEvent*, EffectView*)),
+			this, SLOT(startEffectDrag(QMouseEvent*, EffectView*)), Qt::QueuedConnection);
+	return view;
+}
+
+
+
+
+void EffectRackView::update()
+{
 	QVector<bool> view_map( qMax<int>( fxChain()->m_effects.size(),
 						m_effectViews.size() ), false );
 
@@ -192,18 +303,10 @@ void EffectRackView::update()
 		}
 		if( i >= m_effectViews.size() )
 		{
-			EffectView * view = new EffectView( *it, w );
-			connect( view, SIGNAL( moveUp( EffectView * ) ),
-					this, SLOT( moveUp( EffectView * ) ) );
-			connect( view, SIGNAL( moveDown( EffectView * ) ),
-				this, SLOT( moveDown( EffectView * ) ) );
-			connect(view, SIGNAL(moveTo(QDropEvent *, EffectView *)),
-				this, SLOT(moveTo(QDropEvent *, EffectView *)));
-			connect( view, SIGNAL( deletePlugin( EffectView * ) ),
-				this, SLOT( deletePlugin( EffectView * ) ),
-							Qt::QueuedConnection );
+			// TODO: use real list instead of stupid scroll area!
+			EffectView * view = createEffectView(*it);
 			view->show();
-			m_effectViews.append( view );
+			m_effectViews.append(view);
 			if( i < view_map.size() )
 			{
 				view_map[i] = true;
@@ -238,6 +341,7 @@ void EffectRackView::update()
 		}
 	}
 
+	QWidget * w = m_scrollArea->widget();
 	w->setFixedSize( 210 + 2*EffectViewMargin, m_lastY );
 
 	QWidget::update();
@@ -286,8 +390,3 @@ void EffectRackView::modelChanged()
 	connect( fxChain(), SIGNAL( aboutToClear() ), this, SLOT( clearViews() ) );
 	update();
 }
-
-
-
-
-

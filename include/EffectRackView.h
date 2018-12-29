@@ -51,8 +51,11 @@ public slots:
 	void clearViews();
 	void moveUp( EffectView* view );
 	void moveDown( EffectView* view );
-	void moveTo(QDropEvent* event, EffectView* view);
 	void deletePlugin( EffectView* view );
+	void startEffectDrag(QMouseEvent* event, EffectView* view);
+	void genericDragEnter(QDragEnterEvent *event);
+	void genericDrop(QDropEvent* event, EffectView* view);
+
 
 
 private slots:
@@ -60,8 +63,15 @@ private slots:
 	void addEffect();
 
 
+protected:
+	virtual void dropEvent(QDropEvent *event);
+	virtual void dragEnterEvent(QDragEnterEvent *event);
+
+
 private:
 	virtual void modelChanged();
+
+	virtual EffectView * createEffectView(Effect * it);
 
 	inline EffectChain* fxChain()
 	{

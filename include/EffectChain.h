@@ -30,6 +30,8 @@
 #include "SerializingObject.h"
 #include "AutomatableModel.h"
 
+#include <QDomNode>
+
 class Effect;
 
 
@@ -48,7 +50,9 @@ public:
 		return "fxchain";
 	}
 
+	Effect* effectFromDomNode(QDomNode & node);
 	void appendEffect( Effect * _effect );
+	void insertEffect(const int pos, Effect * _effect);
 	void removeEffect( Effect * _effect );
 	void moveDown( Effect * _effect );
 	void moveUp( Effect * _effect );

@@ -69,8 +69,10 @@ public slots:
 signals:
 	void moveUp( EffectView * _plugin );
 	void moveDown( EffectView * _plugin );
-	void moveTo(QDropEvent * _de, EffectView * _view);
 	void deletePlugin( EffectView * _plugin );
+	void startEffectDrag(QMouseEvent* event, EffectView* view);
+	void genericDrop(QDropEvent* event, EffectView* view);
+	void genericDragEnter(QDragEnterEvent *event);
 
 
 protected:

@@ -33,29 +33,39 @@
 #include "GuiApplication.h"
 #include "MainWindow.h"
 
+StringPairDrag::StringPairDrag(QWidget * _w) :
+	QDrag(_w)
+{
+}
 
 StringPairDrag::StringPairDrag( const QString & _key, const QString & _value,
-					const QPixmap & _icon, QWidget * _w ) :
+					const QPixmap & _icon, QWidget * _w) :
 	QDrag( _w )
 {
-	if( _icon.isNull() && _w )
+	exec(_key, _value, _icon, Qt::LinkAction, Qt::LinkAction);
+}
+
+Qt::DropAction StringPairDrag::exec(const QString & key, const QString & value,
+		const QPixmap & icon, const Qt::DropActions supported_actions,
+		const Qt::DropAction default_action)
+{
+	if( icon.isNull() && source() )
 	{
-		setPixmap( _w->grab().scaled(
+		setPixmap( static_cast<QWidget*>(source())->grab().scaled(
 						64, 64,
 						Qt::KeepAspectRatio,
 						Qt::SmoothTransformation ) );
 	}
 	else
 	{
-		setPixmap( _icon );
+		setPixmap( icon );
 	}
-	QString txt = _key + ":" + _value;
+	QString txt = key + ":" + value;
 	QMimeData * m = new QMimeData();
-	m->setData( mimeType(), txt.toUtf8() );
-	setMimeData( m );
-	exec( Qt::LinkAction, Qt::LinkAction );
+	m->setData(mimeType(), txt.toUtf8());
+	setMimeData(m);
+	return QDrag::exec(supported_actions, default_action);
 }
-
 
 
 

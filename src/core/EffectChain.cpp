@@ -74,6 +74,31 @@ void EffectChain::saveSettings( QDomDocument & _doc, QDomElement & _this )
 
 
 
+Effect* EffectChain::effectFromDomNode(QDomNode & node)
+{
+	QDomElement effectData = node.toElement();
+
+	const QString name = effectData.attribute( "name" );
+	EffectKey key( effectData.elementsByTagName( "key" ).item( 0 ).toElement() );
+
+	Effect* e = Effect::instantiate( name.toUtf8(), this, &key );
+
+	if( e != NULL && e->isOkay() && e->nodeName() == node.nodeName() )
+	{
+		e->restoreState( effectData );
+	}
+	else
+	{
+		delete e;
+		e = new DummyEffect( parentModel(), effectData );
+	}
+
+	return e;
+}
+
+
+
+
 void EffectChain::loadSettings( const QDomElement & _this )
 {
 	clear();
@@ -90,22 +115,7 @@ void EffectChain::loadSettings( const QDomElement & _this )
 	{
 		if( node.isElement() && node.nodeName() == "effect" )
 		{
-			QDomElement effectData = node.toElement();
-
-			const QString name = effectData.attribute( "name" );
-			EffectKey key( effectData.elementsByTagName( "key" ).item( 0 ).toElement() );
-
-			Effect* e = Effect::instantiate( name.toUtf8(), this, &key );
-
-			if( e != NULL && e->isOkay() && e->nodeName() == node.nodeName() )
-			{
-				e->restoreState( effectData );
-			}
-			else
-			{
-				delete e;
-				e = new DummyEffect( parentModel(), effectData );
-			}
+			Effect *e = effectFromDomNode(node);
 
 			m_effects.push_back( e );
 			++fx_loaded;
@@ -131,6 +141,16 @@ void EffectChain::appendEffect( Effect * _effect )
 }
 
 
+void EffectChain::insertEffect(const int pos, Effect * _effect)
+{
+	Engine::mixer()->requestChangeInModel();
+	m_effects.insert(pos, _effect);
+	Engine::mixer()->doneChangeInModel();
+
+	m_enabledModel.setValue( true );
+
+	emit dataChanged();
+}
 
 
 void EffectChain::removeEffect( Effect * _effect )
